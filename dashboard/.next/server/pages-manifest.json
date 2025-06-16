@@ -1,12 +1,12 @@
 {
-  "/_error": "pages/_error.js",
   "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
   "/admin": "pages/admin.js",
-  "/api/deploy-status": "pages/api/deploy-status.js",
   "/apgujeong": "pages/apgujeong.js",
-  "/mrs": "pages/mrs.js",
-  "/": "pages/index.js",
+  "/api/deploy-status": "pages/api/deploy-status.js",
   "/geukjin": "pages/geukjin.js",
   "/login": "pages/login.js",
+  "/": "pages/index.js",
+  "/mrs": "pages/mrs.js",
   "/_document": "pages/_document.js"
 }
