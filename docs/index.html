@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>따스한놈들 매출 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .login-form {
+            margin-top: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .dashboard {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .dashboard h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .alert {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🔥 따스한놈들</h1>
+            <p>매출 대시보드 시스템</p>
+        </div>
+        
+        <div id="loginForm" class="login-form">
+            <div class="form-group">
+                <label for="username">아이디</label>
+                <input type="text" id="username" placeholder="아이디를 입력하세요" value="Warmguys">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요" value="Eksha12!@">
+            </div>
+            
+            <button class="login-btn" onclick="handleLogin()">
+                <span id="loginText">로그인</span>
+                <span id="loginLoading" class="loading" style="display: none;"></span>
+            </button>
+            
+            <div id="errorMessage" class="alert error" style="display: none;"></div>
+        </div>
+        
+        <div id="dashboard" class="dashboard">
+            <h2>📊 따스한놈들 매출 현황</h2>
+            
+            <div class="alert">
+                <strong>✅ 시스템 연결 완료</strong><br>
+                실시간 데이터베이스와 성공적으로 연결되었습니다.
+            </div>
+            
+            <!-- 계열사 대시보드 링크 -->
+            <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <a href="apgujeong/index.html" style="text-decoration: none;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; text-align: center;">
+                        <div style="font-size: 36px;">🍽️</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #333; margin-top: 10px;">압구정곱창</div>
+                        <div style="font-size: 14px; color: #666; margin-top: 5px;">압구정점 • 가로수점</div>
+                    </div>
+                </a>
+                
+                <a href="mrs/index.html" style="text-decoration: none;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; text-align: center;">
+                        <div style="font-size: 36px;">📊</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #333; margin-top: 10px;">엠알에스</div>
+                        <div style="font-size: 14px; color: #666; margin-top: 5px;">온라인 쇼핑몰 매출</div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="alert" style="margin-top: 30px;">
+                <strong>🔄 최근 업데이트</strong><br>
+                • 압구정곱창 6월 데이터 업데이트 완료<br>
+                • 가로수점 매출 데이터 추가<br>
+                • 대시보드 UI 개선
+            </div>
+            
+            <button class="logout-btn" onclick="handleLogout()">로그아웃</button>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 따스한놈들. 모든 권리 보유.</p>
+            <p>버전 1.0.0 | 최종 업데이트: 2025.06.16</p>
+        </div>
+    </div>
+
+    <script>
+        // 로그인 상태 확인
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('warmguys_auth') === 'true';
+            if (isLoggedIn) {
+                showDashboard();
+            }
+        });
+
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const loginText = document.getElementById('loginText');
+            const loginLoading = document.getElementById('loginLoading');
+            
+            // 로딩 상태 표시
+            loginText.style.display = 'none';
+            loginLoading.style.display = 'inline-block';
+            
+            // 1초 후 로그인 처리 (실제 API 호출 시뮬레이션)
+            setTimeout(() => {
+                if (username === 'Warmguys' && password === 'Eksha12!@') {
+                    localStorage.setItem('warmguys_auth', 'true');
+                    localStorage.setItem('warmguys_login_time', Date.now());
+                    showDashboard();
+                    errorDiv.style.display = 'none';
+                } else {
+                    errorDiv.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+                    errorDiv.style.display = 'block';
+                    loginText.style.display = 'inline';
+                    loginLoading.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        function showDashboard() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            // 24시간 후 자동 로그아웃
+            setTimeout(() => {
+                handleLogout();
+                alert('보안을 위해 24시간 후 자동 로그아웃되었습니다.');
+            }, 24 * 60 * 60 * 1000);
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('warmguys_auth');
+            localStorage.removeItem('warmguys_login_time');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            
+            // 입력 필드 초기화
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // Enter 키로 로그인
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.getElementById('loginForm').style.display !== 'none') {
+                handleLogin();
+            }
+        });
+
+        // 실시간 시계
+        setInterval(() => {
+            const now = new Date();
+            console.log('Current time:', now.toLocaleString('ko-KR'));
+        }, 60000);
+    </script>
+</body>
+</html>
