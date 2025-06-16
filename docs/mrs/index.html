@@ -232,7 +232,7 @@
                 <h1>엠알에스 매출 대시보드</h1>
                 <p id="period-title">온라인 매출 분석</p>
             </div>
-            <button class="back-button" onclick="window.location.href='../../index.html'">← 메인으로 돌아가기</button>
+            <button class="back-button" onclick="window.location.href='../index.html'">← 메인으로 돌아가기</button>
         </div>
 
         <div class="period-selector">
@@ -329,9 +329,9 @@
 
         // 로그인 확인
         document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const isLoggedIn = localStorage.getItem('warmguys_auth') === 'true';
             if (!isLoggedIn) {
-                window.location.href = '../../index.html';
+                window.location.href = '../index.html';
                 return;
             }
 

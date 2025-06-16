@@ -317,9 +317,9 @@
 
         // 로그인 확인
         document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const isLoggedIn = localStorage.getItem('warmguys_auth') === 'true';
             if (!isLoggedIn) {
-                window.location.href = '../../index.html';
+                window.location.href = '../index.html';
                 return;
             }
 
