@@ -1,0 +1,42 @@
+name: Daily Dashboard Report
+
+on:
+  schedule:
+    # 한국 시간 오전 10시 30분 (UTC 01:30)
+    - cron: '30 1 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  capture-and-send:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Install Playwright browsers
+      run: npx playwright install chromium
+    
+    - name: Create screenshots directory
+      run: mkdir -p screenshots
+    
+    - name: Capture and send dashboards
+      run: node scripts/capture-all-dashboards.js
+      env:
+        CI: true
+    
+    - name: Upload screenshots as artifacts (for debugging)
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dashboard-screenshots
+        path: screenshots/
+        retention-days: 7 

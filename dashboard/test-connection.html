@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Supabase 연결 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase 연결 테스트</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Supabase 설정
+        const SUPABASE_URL = 'https://ooqexropurnslqmcbjqk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcWV4cm9wdXJuc2xxbWNianFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NzQyMDUsImV4cCI6MjA2MzA1MDIwNX0.yXVabtxZwX3QFF6xnjmj5VI2Lrp_7fZ3HvS5dCalbuA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // 압구정점 데이터 테스트
+                const { data: apgujungData, error: apgujungError } = await supabase
+                    .from('apgujeong_apgujung_sales')
+                    .select('*')
+                    .limit(5)
+                    .order('date', { ascending: false });
+                
+                if (apgujungError) {
+                    resultDiv.innerHTML += `<p style="color: red;">압구정점 오류: ${apgujungError.message}</p>`;
+                } else {
+                    resultDiv.innerHTML += `<p style="color: green;">압구정점 데이터: ${apgujungData.length}개 로드됨</p>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(apgujungData[0], null, 2)}</pre>`;
+                }
+                
+                // 가로수점 데이터 테스트
+                const { data: garosuData, error: garosuError } = await supabase
+                    .from('apgujeong_garosu_sales')
+                    .select('*')
+                    .limit(5)
+                    .order('date', { ascending: false });
+                
+                if (garosuError) {
+                    resultDiv.innerHTML += `<p style="color: red;">가로수점 오류: ${garosuError.message}</p>`;
+                } else {
+                    resultDiv.innerHTML += `<p style="color: green;">가로수점 데이터: ${garosuData.length}개 로드됨</p>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(garosuData[0], null, 2)}</pre>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<p style="color: red;">예외 발생: ${error.message}</p>`;
+            }
+        }
+        
+        // 페이지 로드 시 테스트 실행
+        testConnection();
+    </script>
+</body>
+</html> 

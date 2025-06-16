@@ -1,0 +1,31 @@
+{
+  "name": "warmguys-dashboard-screenshots",
+  "version": "1.0.0",
+  "description": "따스한놈들 대시보드 스크린샷 자동화",
+  "main": "scripts/capture-dashboards.js",
+  "scripts": {
+    "capture": "node scripts/capture-dashboards.js",
+    "capture-slack": "node scripts/capture-and-send-slack.js",
+    "send-slack": "node scripts/send-screenshot-to-slack.js",
+    "send-slack-bot": "node scripts/send-screenshot-with-bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "dashboard",
+    "screenshot",
+    "slack",
+    "automation"
+  ],
+  "author": "Warmguys",
+  "license": "MIT",
+  "dependencies": {
+    "@slack/web-api": "^6.13.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.5.0",
+    "playwright": "^1.52.0",
+    "puppeteer": "^21.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

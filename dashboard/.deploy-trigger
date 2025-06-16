@@ -1,0 +1,10 @@
+// 웜가이즈 매출 대시보드 - 단순화된 배포 트리거
+// Build timestamp: 2025-05-18T13:59:20Z
+
+console.log('웜가이즈 매출 대시보드 - 단순화된 빌드 시작');
+console.log('빌드 시간:', new Date().toISOString());
+console.log('배포 버전: v1.2.0 (Simplified)');
+console.log('TypeScript/ESLint 에러 무시');
+console.log('간단한 테스트 페이지');
+console.log('환경 변수 파일 생성');
+console.log('배포 시도: 10번째 (단순화)');

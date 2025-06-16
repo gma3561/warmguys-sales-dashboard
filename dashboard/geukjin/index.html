@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>극진이앤지 매출 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #1f2937;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 1rem;
+            margin: 0 0 2rem 0;
+        }
+
+        .period-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .period-btn.active {
+            background: #1f2937;
+            color: white;
+            border-color: #1f2937;
+        }
+
+        .month-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .month-btn {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+            min-width: 50px;
+        }
+
+        .month-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .month-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .month-btn.active:hover {
+            background: #2563eb;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .kpi-card h3 {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-card .value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .kpi-card .comparison {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .kpi-card .positive {
+            color: #10b981;
+        }
+
+        .kpi-card .negative {
+            color: #ef4444;
+        }
+        
+        .chart-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .chart-section h3 {
+            font-size: 1.2rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 300px;
+        }
+        
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .comparison-table th {
+            background-color: #f9fafb;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table .channel-name {
+            font-weight: 500;
+        }
+
+        .comparison-table .positive {
+            color: #10b981;
+        }
+
+        .comparison-table .negative {
+            color: #ef4444;
+        }
+
+        .back-button {
+            padding: 0.5rem 1rem;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 4px;
+            color: #374151;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #e5e7eb;
+        }
+
+        @media (max-width: 768px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>극진이앤지 매출 대시보드</h1>
+                <p id="period-title">온라인 매출 분석</p>
+            </div>
+            <button class="back-button" onclick="window.location.href='../../index.html'">← 메인으로 돌아가기</button>
+        </div>
+
+        <div class="period-selector">
+            <button class="period-btn" data-period="day" id="day-btn">일별</button>
+            <button class="period-btn" data-period="week" id="week-btn">주별</button>
+            <button class="period-btn active" data-period="month" id="month-btn">월별</button>
+        </div>
+
+        <div class="month-selector" id="month-selector">
+            <!-- 월별 선택 버튼들이 동적으로 생성됩니다 -->
+        </div>
+
+        <div class="dashboard">
+            <div class="kpi-grid" id="kpi-grid">
+                <!-- KPI 카드가 동적으로 생성됩니다 -->
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-section">
+                    <h3>채널별 매출 추이</h3>
+                    <div class="chart-container">
+                        <canvas id="sales-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-section">
+                    <h3>채널별 매출 비율</h3>
+                    <div class="chart-container">
+                        <canvas id="sales-ratio-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <h3>채널별 매출 비교</h3>
+                <div>
+                    <table class="comparison-table" id="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>채널</th>
+                                <th>현재 기간</th>
+                                <th>이전 기간</th>
+                                <th>증감</th>
+                                <th>증감률</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 테이블 내용이 동적으로 생성됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 전체 데이터 테이블 -->
+            <div class="chart-section">
+                <h3>전체 매출 데이터</h3>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="comparison-table" id="all-data-table">
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>쿠팡로켓</th>
+                                <th>스마트스토어</th>
+                                <th>쿠팡윙</th>
+                                <th>총 매출</th>
+                                <th>환불액</th>
+                                <th>순 매출</th>
+                                <th>특이사항</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 전체 데이터가 동적으로 생성됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 설정
+        const SUPABASE_URL = 'https://ooqexropurnslqmcbjqk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcWV4cm9wdXJuc2xxbWNianFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NzQyMDUsImV4cCI6MjA2MzA1MDIwNX0.yXVabtxZwX3QFF6xnjmj5VI2Lrp_7fZ3HvS5dCalbuA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 현재 선택된 기간 (일/주/월)
+        let currentPeriod = 'month';
+        let selectedMonth = moment().month() + 1; // 현재 월 (1-12)
+        let selectedYear = moment().year(); // 현재 년도
+        
+        // 차트 객체
+        let salesTrendChart = null;
+        let salesRatioChart = null;
+
+        // 로그인 확인
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = '../../index.html';
+                return;
+            }
+
+            // 이벤트 리스너 설정
+            setupEventListeners();
+
+            // 데이터 로드
+            loadData();
+        });
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 기간 선택 버튼
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 이전 active 클래스 제거
+                    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                    // 현재 버튼에 active 클래스 추가
+                    this.classList.add('active');
+                    // 현재 기간 업데이트
+                    currentPeriod = this.dataset.period;
+                    
+                    // 월별 선택기 표시/숨김
+                    const monthSelector = document.getElementById('month-selector');
+                    if (currentPeriod === 'month') {
+                        monthSelector.style.display = 'flex';
+                        createMonthButtons();
+                    } else {
+                        monthSelector.style.display = 'none';
+                    }
+                    
+                    // 데이터 다시 로드
+                    loadData();
+                });
+            });
+            
+            // 초기 월별 버튼 생성
+            createMonthButtons();
+        }
+
+        // 월별 선택 버튼 생성
+        function createMonthButtons() {
+            const monthSelector = document.getElementById('month-selector');
+            monthSelector.innerHTML = '';
+            
+            const months = [
+                '1월', '2월', '3월', '4월', '5월', '6월',
+                '7월', '8월', '9월', '10월', '11월', '12월'
+            ];
+            
+            months.forEach((monthName, index) => {
+                const monthNum = index + 1;
+                const btn = document.createElement('button');
+                btn.className = `month-btn ${monthNum === selectedMonth ? 'active' : ''}`;
+                btn.textContent = monthName;
+                btn.dataset.month = monthNum;
+                
+                btn.addEventListener('click', function() {
+                    // 이전 active 클래스 제거
+                    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+                    // 현재 버튼에 active 클래스 추가
+                    this.classList.add('active');
+                    // 선택된 월 업데이트
+                    selectedMonth = parseInt(this.dataset.month);
+                    // 데이터 다시 로드
+                    loadData();
+                });
+                
+                monthSelector.appendChild(btn);
+            });
+        }
+
+        // 데이터 로드
+        async function loadData() {
+            try {
+                // fuel_transactions 테이블에서 데이터 가져오기
+                const { data, error } = await supabase
+                    .from('fuel_transactions')
+                    .select('*')
+                    .order('transfer_date', { ascending: false });
+
+                if (error) throw error;
+                
+                // 기간에 따라 데이터 처리
+                processDataByPeriod(data);
+
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+            }
+        }
+
+        // 기간별 데이터 처리
+        function processDataByPeriod(data) {
+            // moment.js에서 한 주의 시작을 월요일로 설정
+            moment.locale('ko', {
+                week: {
+                    dow: 1, // 월요일을 주의 시작으로 설정 (0: 일요일, 1: 월요일)
+                    doy: 4  // 한 해의 첫 번째 주는 1월 4일이 포함된 주
+                }
+            });
+            
+            let currentData, previousData, filteredData;
+
+            switch (currentPeriod) {
+                case 'day':
+                    // 오늘과 어제 데이터
+                    currentData = data[0] || {};
+                    previousData = data[1] || {};
+                    filteredData = data.slice(0, 7); // 최근 7일
+                    document.getElementById('day-btn').textContent = `일별 (${moment(currentData.transfer_date).format('MM/DD')})`;
+                    break;
+                
+                case 'week':
+                    // 이번 주와 지난 주 데이터 (월요일 시작)
+                    const thisWeekData = data.filter(d => {
+                        const transfer_date = moment(d.transfer_date);
+                        return transfer_date.isSameOrAfter(moment().startOf('week')) && transfer_date.isSameOrBefore(moment().endOf('week'));
+                    });
+                    
+                    const lastWeekData = data.filter(d => {
+                        const transfer_date = moment(d.transfer_date);
+                        return transfer_date.isSameOrAfter(moment().subtract(1, 'week').startOf('week')) && 
+                               transfer_date.isSameOrBefore(moment().subtract(1, 'week').endOf('week'));
+                    });
+                    
+                    currentData = aggregateData(thisWeekData);
+                    previousData = aggregateData(lastWeekData);
+                    filteredData = thisWeekData; // 이번 주 데이터만
+                    document.getElementById('week-btn').textContent = `주별 (${moment().startOf('week').format('MM/DD')}-${moment().endOf('week').format('MM/DD')})`;
+                    break;
+                
+                case 'month':
+                    // 선택된 월의 데이터 처리
+                    const selectedDate = moment().year(selectedYear).month(selectedMonth - 1);
+                    const monthStart = selectedDate.clone().startOf('month');
+                    
+                    // 현재 월인 경우 현재일까지, 과거/미래 월인 경우 해당 월의 마지막일까지
+                    let monthEnd;
+                    if (selectedMonth === moment().month() + 1 && selectedYear === moment().year()) {
+                        monthEnd = moment(); // 현재일까지
+                    } else {
+                        monthEnd = selectedDate.clone().endOf('month'); // 해당 월의 마지막일까지
+                    }
+                    
+                    // 선택된 월의 데이터 필터링 (1일부터 현재일 또는 마지막일까지)
+                    const selectedMonthData = data.filter(d => {
+                        const transfer_date = moment(d.transfer_date);
+                        return transfer_date.isSameOrAfter(monthStart, 'day') && transfer_date.isSameOrBefore(monthEnd, 'day');
+                    });
+                    
+                    // 이전 월 동기간 데이터 (비교용)
+                    const prevMonthStart = monthStart.clone().subtract(1, 'month');
+                    const daysDiff = monthEnd.diff(monthStart, 'days');
+                    const prevMonthEnd = prevMonthStart.clone().add(daysDiff, 'days');
+                    
+                    const lastMonthData = data.filter(d => {
+                        const transfer_date = moment(d.transfer_date);
+                        return transfer_date.isSameOrAfter(prevMonthStart, 'day') && transfer_date.isSameOrBefore(prevMonthEnd, 'day');
+                    });
+                    
+                    currentData = aggregateData(selectedMonthData);
+                    previousData = aggregateData(lastMonthData);
+                    filteredData = selectedMonthData; // 선택된 월 데이터만
+                    
+                    // 버튼 텍스트 업데이트
+                    const monthText = selectedMonth === moment().month() + 1 && selectedYear === moment().year() 
+                        ? `${selectedYear}/${selectedMonth.toString().padStart(2, '0')} (1일~현재)`
+                        : `${selectedYear}/${selectedMonth.toString().padStart(2, '0')}`;
+                    document.getElementById('month-btn').textContent = `월별 (${monthText})`;
+                    break;
+            }
+
+            // UI 업데이트 (필터링된 데이터 사용)
+            uptransfer_dateKPIs(currentData, previousData);
+            uptransfer_dateCharts(filteredData);
+            uptransfer_dateComparisonTable(currentData, previousData);
+            
+            // 전체 데이터 테이블은 항상 선택된 월의 전체 데이터 표시
+            let tableDisplayData;
+            if (currentPeriod === 'month') {
+                // 월별일 때는 선택된 월의 원본 데이터 (filteredData가 이미 선택된 월 데이터)
+                tableDisplayData = filteredData;
+            } else {
+                // 일별/주별일 때도 현재 월의 전체 데이터 표시
+                const currentMonth = moment().month() + 1;
+                const currentYear = moment().year();
+                const monthStart = moment().year(currentYear).month(currentMonth - 1).startOf('month');
+                const monthEnd = moment(); // 현재일까지
+                
+                tableDisplayData = data.filter(d => {
+                    const transfer_date = moment(d.transfer_date);
+                    return transfer_date.isSameOrAfter(monthStart, 'day') && transfer_date.isSameOrBefore(monthEnd, 'day');
+                });
+            }
+            
+            uptransfer_dateAllDataTable(tableDisplayData);
+        }
+
+        // 데이터 집계
+        function aggregateData(dataArray) {
+            if (!dataArray || dataArray.length === 0) return {};
+            
+            return dataArray.reduce((acc, curr) => {
+                Object.keys(curr).forEach(key => {
+                    if (typeof curr[key] === 'number') {
+                        acc[key] = (acc[key] || 0) + curr[key];
+                    }
+                });
+                return acc;
+            }, {});
+        }
+
+        // KPI 업데이트
+        function uptransfer_dateKPIs(currentData, previousData) {
+            const kpiGrid = document.getElementById('kpi-grid');
+            kpiGrid.innerHTML = '';
+            
+            // KPI 정의
+            const kpis = [
+                { key: 'sale_total_amount', label: '총 매출' },
+                { key: 'fuel_type', label: '유종' },
+                { key: 'delivery_destination', label: '발주처' },
+                { key: 'liters', label: '리터' }
+            ];
+            
+            // KPI 카드 생성
+            kpis.forEach(kpi => {
+                const currentValue = currentData[kpi.key] || 0;
+                const previousValue = previousData[kpi.key] || 0;
+                const difference = currentValue - previousValue;
+                const percentChange = previousValue ? (difference / previousValue * 100).toFixed(1) : 0;
+                
+                const kpiCard = document.createElement('div');
+                kpiCard.className = 'kpi-card';
+                kpiCard.innerHTML = `
+                    <h3>${kpi.label}</h3>
+                    <div class="value">${formatCurrency(currentValue)}</div>
+                    <div class="comparison ${difference >= 0 ? 'positive' : 'negative'}">
+                        ${difference >= 0 ? '▲' : '▼'} ${formatCurrency(Math.abs(difference))} (${Math.abs(percentChange)}%)
+                    </div>
+                `;
+                kpiGrid.appendChild(kpiCard);
+            });
+        }
+
+        // 차트 업데이트
+        function uptransfer_dateCharts(data) {
+            uptransfer_dateSalesTrendChart(data);
+            uptransfer_dateSalesRatioChart(data);
+        }
+
+        // 매출 추이 차트 업데이트
+        function uptransfer_dateSalesTrendChart(data) {
+            // 날짜별로 정렬
+            const sortedData = [...data].sort((a, b) => new Date(a.transfer_date) - new Date(b.transfer_date));
+            
+            // 최근 7일 데이터만 사용
+            const chartData = sortedData.slice(-7);
+            
+            const labels = chartData.map(d => moment(d.transfer_date).format('MM/DD'));
+            
+            const datasets = [
+                {
+                    label: '쿠팡로켓',
+                    data: chartData.map(d => d.coupang_rocket || 0),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    tension: 0.1
+                },
+                {
+                    label: '스마트스토어',
+                    data: chartData.map(d => d.smart_store || 0),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    tension: 0.1
+                },
+                {
+                    label: '쿠팡윙',
+                    data: chartData.map(d => d.coupang_wing || 0),
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                    tension: 0.1
+                },
+                {
+                    label: '기타',
+                    data: chartData.map(d => d.other_online || 0),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    tension: 0.1
+                }
+            ];
+            
+            // 차트 업데이트 또는 생성
+            const ctx = document.getElementById('sales-trend-chart').getContext('2d');
+            
+            if (salesTrendChart) {
+                salesTrendChart.data.labels = labels;
+                salesTrendChart.data.datasets = datasets;
+                salesTrendChart.uptransfer_date();
+            } else {
+                salesTrendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.raw !== null) {
+                                            label += formatCurrency(context.raw);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return formatCurrency(value, true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // 매출 비율 차트 업데이트
+        function uptransfer_dateSalesRatioChart(data) {
+            // 가장 최근 데이터
+            const latestData = data[0] || {};
+            
+            const channelData = [
+                latestData.coupang_rocket || 0,
+                latestData.smart_store || 0,
+                latestData.coupang_wing || 0,
+                latestData.other_online || 0,
+                latestData.wholesale || 0,
+                latestData.export || 0
+            ];
+            
+            const ctx = document.getElementById('sales-ratio-chart').getContext('2d');
+            
+            if (salesRatioChart) {
+                salesRatioChart.data.datasets[0].data = channelData;
+                salesRatioChart.uptransfer_date();
+            } else {
+                salesRatioChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['쿠팡로켓', '스마트스토어', '쿠팡윙', '기타온라인', '도매', '수출'],
+                        datasets: [{
+                            data: channelData,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 205, 86, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // 비교 테이블 업데이트
+        function uptransfer_dateComparisonTable(currentData, previousData) {
+            const tableBody = document.querySelector('#comparison-table tbody');
+            tableBody.innerHTML = '';
+            
+            const channels = [
+                { key: 'fuel_type', label: '유종' },
+                { key: 'delivery_destination', label: '발주처' },
+                { key: 'coupang_wing', label: '쿠팡윙' },
+                { key: 'other_online', label: '기타온라인' },
+                { key: 'wholesale', label: '도매' },
+                { key: 'export', label: '수출' },
+                { key: 'sale_total_amount', label: '총 매출' }
+            ];
+            
+            channels.forEach(channel => {
+                const currentValue = currentData[channel.key] || 0;
+                const previousValue = previousData[channel.key] || 0;
+                const difference = currentValue - previousValue;
+                const percentChange = previousValue ? (difference / previousValue * 100).toFixed(1) : 0;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="channel-name">${channel.label}</td>
+                    <td>${formatCurrency(currentValue)}</td>
+                    <td>${formatCurrency(previousValue)}</td>
+                    <td class="${difference >= 0 ? 'positive' : 'negative'}">${difference >= 0 ? '+' : ''}${formatCurrency(difference)}</td>
+                    <td class="${difference >= 0 ? 'positive' : 'negative'}">${difference >= 0 ? '+' : ''}${percentChange}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 전체 데이터 테이블 업데이트
+        function uptransfer_dateAllDataTable(data) {
+            const tableBody = document.querySelector('#all-data-table tbody');
+            tableBody.innerHTML = '';
+            
+            // 날짜별로 정렬 (최신순)
+            const sortedData = [...data].sort((a, b) => new Date(b.transfer_date) - new Date(a.transfer_date));
+            
+            sortedData.forEach(row => {
+                const tr = document.createElement('tr');
+                const netSales = ((row.sale_total_amount || row.cost_total_amount || 0)) - (row.refund_amount || 0);
+                
+                tr.innerHTML = `
+                    <td>${moment(row.transfer_date).format('YYYY-MM-DD')}</td>
+                    <td>${formatCurrency(row.coupang_rocket || 0)}</td>
+                    <td>${formatCurrency(row.smart_store || 0)}</td>
+                    <td>${formatCurrency(row.coupang_wing || 0)}</td>
+                    <td>${formatCurrency((row.sale_total_amount || row.cost_total_amount || 0))}</td>
+                    <td>${formatCurrency(row.refund_amount || 0)}</td>
+                    <td>${formatCurrency(netSales)}</td>
+                    <td>${row.notes || '-'}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // 숫자 포맷팅 (통화)
+        function formatCurrency(amount, abbreviated = false) {
+            if (amount === null || amount === undefined) return '-';
+            
+            if (abbreviated && Math.abs(amount) >= 10000000) {
+                return (amount / 10000000).toFixed(1) + '천만원';
+            } else if (abbreviated && Math.abs(amount) >= 10000) {
+                return (amount / 10000).toFixed(1) + '만원';
+            }
+            
+            return new Intl.NumberFormat('ko-KR', {
+                style: 'currency',
+                currency: 'KRW',
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+    </script>
+</body>
+</html>

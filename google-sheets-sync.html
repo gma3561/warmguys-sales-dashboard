@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets 연동 - 따스한놈들</title>
+    <script src="scripts/google-sheets-sync.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+            text-align: center;
+        }
+        
+        .sync-section {
+            background: #f3f4f6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        h2 {
+            margin-bottom: 1rem;
+            color: #374151;
+            font-size: 1.25rem;
+        }
+        
+        .info-box {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-box ul {
+            margin-left: 1.5rem;
+            color: #1e40af;
+        }
+        
+        .info-box ul li {
+            margin-bottom: 0.3rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .btn:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+        
+        .btn.danger {
+            background: #dc2626;
+        }
+        
+        .btn.danger:hover {
+            background: #b91c1c;
+        }
+        
+        .btn.success {
+            background: #16a34a;
+        }
+        
+        .status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .status.success {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #86efac;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .status.loading {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .results-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        
+        .company-sync {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .company-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        
+        .company-card h3 {
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .logs {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Google Sheets 연동 시스템</h1>
+        
+        <div class="info-box">
+            <h3>📋 설정 정보</h3>
+            <ul>
+                <li><strong>스프레드시트 ID:</strong> 1Qq0sgm9xyTPmhphzIhyo_-lI55F4M7SOTS2FEBvsvQU</li>
+                <li><strong>연동 대상:</strong> 따스한놈들, 엠알에스, 압구정곱창, 극진이앤지</li>
+                <li><strong>동기화 방식:</strong> CSV 내보내기 → Supabase 업로드</li>
+                <li><strong>필요 조건:</strong> Google Sheets가 "링크가 있는 모든 사용자" 읽기 권한으로 공개되어야 함</li>
+            </ul>
+        </div>
+        
+        <div class="sync-section">
+            <h2>전체 동기화</h2>
+            <p>모든 회사의 데이터를 Google Sheets에서 가져와서 Supabase에 업데이트합니다.</p>
+            <button id="sync-all" class="btn">전체 데이터 동기화</button>
+            <div id="sync-all-status" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="sync-section">
+            <h2>개별 회사 동기화</h2>
+            <div class="company-sync">
+                <div class="company-card">
+                    <h3>따스한놈들 (지주사)</h3>
+                    <button onclick="syncCompany('warmguys')" class="btn">동기화</button>
+                    <div id="warmguys-status" class="status" style="display: none;"></div>
+                </div>
+                <div class="company-card">
+                    <h3>엠알에스</h3>
+                    <button onclick="syncCompany('mrs')" class="btn">동기화</button>
+                    <div id="mrs-status" class="status" style="display: none;"></div>
+                </div>
+                <div class="company-card">
+                    <h3>압구정곱창</h3>
+                    <button onclick="syncCompany('apgujeong')" class="btn">동기화</button>
+                    <div id="apgujeong-status" class="status" style="display: none;"></div>
+                </div>
+                <div class="company-card">
+                    <h3>극진이앤지</h3>
+                    <button onclick="syncCompany('geukjin')" class="btn">동기화</button>
+                    <div id="geukjin-status" class="status" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sync-section">
+            <h2>동기화 결과</h2>
+            <div id="results-container" style="display: none;">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>회사</th>
+                            <th>상태</th>
+                            <th>레코드 수</th>
+                            <th>메시지</th>
+                            <th>시간</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="sync-section">
+            <h2>실시간 로그</h2>
+            <div id="logs" class="logs">준비 완료. 동기화를 시작하세요.</div>
+            <button onclick="clearLogs()" class="btn" style="margin-top: 0.5rem;">로그 지우기</button>
+        </div>
+        
+        <div class="sync-section">
+            <h2>유용한 링크</h2>
+            <a href="index.html" class="btn success">메인 대시보드</a>
+            <a href="supabase/dummy-data/index.html" class="btn">더미 데이터 생성</a>
+            <a href="https://docs.google.com/spreadsheets/d/1Qq0sgm9xyTPmhphzIhyo_-lI55F4M7SOTS2FEBvsvQU/edit" class="btn" target="_blank">Google Sheets 열기</a>
+        </div>
+    </div>
+
+    <script>
+        let logElement;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            logElement = document.getElementById('logs');
+            addLog('시스템 초기화 완료');
+            
+            // 전체 동기화 버튼 이벤트
+            document.getElementById('sync-all').addEventListener('click', handleSyncAll);
+        });
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logElement.textContent = '로그가 지워졌습니다.\n';
+        }
+        
+        function showStatus(elementId, type, message) {
+            const statusElement = document.getElementById(elementId);
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+            statusElement.style.display = 'block';
+        }
+        
+        async function handleSyncAll() {
+            const button = document.getElementById('sync-all');
+            const statusId = 'sync-all-status';
+            
+            button.disabled = true;
+            button.textContent = '동기화 중...';
+            showStatus(statusId, 'loading', '전체 데이터 동기화 진행 중...');
+            addLog('전체 동기화 시작');
+            
+            try {
+                const results = await syncAllData();
+                
+                // 결과 테이블 업데이트
+                updateResultsTable(results);
+                
+                // 성공한 회사 수 계산
+                const successCount = Object.values(results).filter(r => r.success).length;
+                const totalCount = Object.keys(results).length;
+                
+                if (successCount === totalCount) {
+                    showStatus(statusId, 'success', `모든 회사 데이터 동기화 완료! (${successCount}/${totalCount})`);
+                    addLog(`전체 동기화 완료: ${successCount}/${totalCount} 성공`);
+                } else {
+                    showStatus(statusId, 'error', `일부 실패: ${successCount}/${totalCount} 성공`);
+                    addLog(`전체 동기화 완료: ${successCount}/${totalCount} 성공`);
+                }
+                
+            } catch (error) {
+                showStatus(statusId, 'error', `동기화 실패: ${error.message}`);
+                addLog(`전체 동기화 실패: ${error.message}`);
+                console.error(error);
+            } finally {
+                button.disabled = false;
+                button.textContent = '전체 데이터 동기화';
+            }
+        }
+        
+        async function syncCompany(company) {
+            const statusId = `${company}-status`;
+            
+            showStatus(statusId, 'loading', '동기화 중...');
+            addLog(`${company} 동기화 시작`);
+            
+            try {
+                const result = await syncCompanyData(company);
+                
+                if (result.success) {
+                    showStatus(statusId, 'success', `완료! ${result.recordCount}개 레코드 업데이트`);
+                    addLog(`${company} 동기화 완료: ${result.recordCount}개 레코드`);
+                } else {
+                    showStatus(statusId, 'error', '동기화 실패');
+                    addLog(`${company} 동기화 실패`);
+                }
+                
+            } catch (error) {
+                showStatus(statusId, 'error', `실패: ${error.message}`);
+                addLog(`${company} 동기화 실패: ${error.message}`);
+                console.error(error);
+            }
+        }
+        
+        function updateResultsTable(results) {
+            const container = document.getElementById('results-container');
+            const tbody = document.getElementById('results-body');
+            
+            tbody.innerHTML = '';
+            
+            Object.entries(results).forEach(([company, result]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${getCompanyName(company)}</td>
+                    <td><span style="color: ${result.success ? '#16a34a' : '#dc2626'}">${result.success ? '성공' : '실패'}</span></td>
+                    <td>${result.recordCount || 0}</td>
+                    <td>${result.message}</td>
+                    <td>${new Date().toLocaleTimeString('ko-KR')}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            container.style.display = 'block';
+        }
+        
+        function getCompanyName(company) {
+            const names = {
+                warmguys: '따스한놈들',
+                mrs: '엠알에스',
+                apgujeong: '압구정곱창',
+                geukjin: '극진이앤지'
+            };
+            return names[company] || company;
+        }
+    </script>
+</body>
+</html>

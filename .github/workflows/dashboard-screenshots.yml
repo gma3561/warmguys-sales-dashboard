@@ -1,0 +1,57 @@
+name: 📊 Daily Dashboard Screenshots
+
+on:
+  schedule:
+    # 매일 오전 9시 (KST 18시) - 한국 시간 기준으로 조정
+    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+    # 매일 오후 6시 (KST 03시) - 추가 리포트
+    - cron: '0 9 * * *'  # UTC 09:00 = KST 18:00
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+    inputs:
+      send_summary:
+        description: '요약 메시지 전송 여부'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  capture-dashboards:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 📦 Install dependencies
+        run: |
+          npm init -y
+          npm install playwright @slack/web-api
+          
+      - name: 🎭 Install Playwright browsers
+        run: npx playwright install chromium
+        
+      - name: 📸 Capture dashboard screenshots
+        run: node scripts/capture-dashboards.js
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          
+      - name: 📁 Upload screenshots as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-screenshots-${{ github.run_number }}
+          path: screenshots/
+          retention-days: 7
+          
+      - name: 🧹 Cleanup screenshots
+        if: always()
+        run: rm -rf screenshots/ 

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>따스한놈들 매출 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #1f2937;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .login-section.hidden {
+            display: none;
+        }
+        
+        .dashboard-section {
+            display: none;
+        }
+        
+        .dashboard-section.visible {
+            display: block;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .error {
+            color: #dc2626;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        
+        .nav {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav select, .nav input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .kpi-card h3 {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .kpi-card .value {
+            color: #1f2937;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .chart-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 1rem;
+        }
+        
+        .month-table {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .month-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .month-nav button {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+        }
+        
+        .month-nav button:hover {
+            background: #e5e7eb;
+        }
+        
+        .month-nav .current-month {
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        th, td {
+            padding: 0.5rem;
+            text-align: right;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            text-align: center;
+        }
+        
+        th:first-child, td:first-child {
+            text-align: center;
+            background: #f9fafb;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+        
+        .day-column {
+            min-width: 80px;
+        }
+        
+        .total-row {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+        
+        .status {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .status.loading {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .affiliate-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+            padding: 0 1rem;
+        }
+
+        .affiliate-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+
+        .affiliate-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border-color: #3b82f6;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .affiliate-card h3 {
+            color: #1f2937;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .affiliate-card p {
+            color: #6b7280;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-details {
+            background: #f3f4f6;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .card-details span {
+            color: #4b5563;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .affiliate-cards {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 0;
+            }
+            
+            .nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 0.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 따스한놈들 매출 대시보드</h1>
+            <p>계열사 매출 데이터를 실시간으로 분석하고 시각화하는 통합 대시보드</p>
+        </div>
+
+        <!-- 로그인 섹션 -->
+        <div id="login-section" class="login-section">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">로그인</h2>
+            <div class="input-group">
+                <label for="username">아이디</label>
+                <input type="text" id="username" placeholder="아이디를 입력하세요">
+            </div>
+            <div class="input-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+            </div>
+            <button class="btn" onclick="login()">로그인</button>
+            <div id="login-error" class="error"></div>
+        </div>
+
+        <!-- 대시보드 섹션 -->
+        <div id="dashboard-section" class="dashboard-section">
+            <!-- 네비게이션 -->
+            <div class="nav">
+                <div class="nav-controls">
+                    <h2>계열사를 선택하세요</h2>
+                </div>
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+
+            <!-- 계열사 선택 카드 -->
+            <div class="affiliate-cards">
+                <div class="affiliate-card" onclick="window.location.href='dashboard/mrs/index.html'">
+                    <div class="card-icon">📊</div>
+                    <h3>엠알에스 (MRS)</h3>
+                    <p>온라인 쇼핑몰 매출 관리</p>
+                    <div class="card-details">
+                        <span>쿠팡로켓 • 스마트스토어 • 쿠팡윙</span>
+                    </div>
+                </div>
+
+                <div class="affiliate-card" onclick="window.location.href='dashboard/apgujeong/index.html?location=압구정점'">
+                    <div class="card-icon">🍽️</div>
+                    <h3>압구정곱창 압구정점</h3>
+                    <p>압구정점 매출 관리</p>
+                    <div class="card-details">
+                        <span>카드 매출 • 현금 매출 • 배달 매출</span>
+                    </div>
+                </div>
+                
+                <div class="affiliate-card" onclick="window.location.href='dashboard/apgujeong/index.html?location=가로수점'">
+                    <div class="card-icon">🍽️</div>
+                    <h3>압구정곱창 가로수점</h3>
+                    <p>가로수점 매출 관리</p>
+                    <div class="card-details">
+                        <span>카드 매출 • 현금 매출 • 배달 매출</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 로그인 함수
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (username === 'Warmguys' && password === 'Eksha12!@') {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loginTime', Date.now().toString());
+                
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.add('visible');
+            } else {
+                errorDiv.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+            }
+        }
+
+        // 로그아웃 함수
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('loginTime');
+            
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('dashboard-section').classList.remove('visible');
+        }
+
+        // 페이지 로드 시 로그인 상태 확인
+        window.onload = function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const loginTime = localStorage.getItem('loginTime');
+            
+            if (isLoggedIn && loginTime) {
+                const elapsed = Date.now() - parseInt(loginTime);
+                if (elapsed > 24 * 60 * 60 * 1000) {
+                    logout();
+                    return;
+                }
+                
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.add('visible');
+            }
+        };
+
+        // Enter 키로 로그인
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('login-section').classList.contains('hidden')) {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>

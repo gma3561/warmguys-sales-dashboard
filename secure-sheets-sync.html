@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보안 Google Sheets 연동 - 따스한놈들</title>
+    <script src="scripts/secure-sheets-sync.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+            text-align: center;
+        }
+        
+        .security-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .security-notice h3 {
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+        
+        .security-notice p {
+            color: #92400e;
+            font-size: 0.9rem;
+        }
+        
+        .config-section {
+            background: #f3f4f6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .config-section h2 {
+            margin-bottom: 1rem;
+            color: #374151;
+            font-size: 1.25rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .btn:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+        
+        .btn.success {
+            background: #16a34a;
+        }
+        
+        .btn.success:hover {
+            background: #15803d;
+        }
+        
+        .btn.danger {
+            background: #dc2626;
+        }
+        
+        .btn.danger:hover {
+            background: #b91c1c;
+        }
+        
+        .status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .status.success {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #86efac;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .status.loading {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+        
+        .setup-steps {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .setup-steps h3 {
+            color: #1e40af;
+            margin-bottom: 1rem;
+        }
+        
+        .setup-steps ol {
+            margin-left: 1.5rem;
+            color: #1e40af;
+        }
+        
+        .setup-steps ol li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .setup-steps code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+        }
+        
+        .logs {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .results-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        
+        .config-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .config-status.ready {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .config-status.not-ready {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 보안 Google Sheets 연동</h1>
+        
+        <div class="security-notice">
+            <h3>🛡️ 보안 연동 방식</h3>
+            <p>이 방식은 Google Sheets를 공개하지 않고도 안전하게 데이터를 가져올 수 있습니다. Google Apps Script 웹 앱을 통해 인증된 요청만 처리합니다.</p>
+        </div>
+        
+        <div class="setup-steps">
+            <h3>📋 설정 단계</h3>
+            <ol>
+                <li><strong>Google Apps Script 설정:</strong>
+                    <ul>
+                        <li><a href="https://script.google.com" target="_blank">Google Apps Script</a>에서 새 프로젝트 생성</li>
+                        <li><code>google-apps-script/Code.gs</code> 파일의 내용을 복사하여 붙여넣기</li>
+                        <li>스프레드시트 ID와 시트 이름을 실제 값으로 수정</li>
+                        <li>API 키를 안전한 값으로 변경</li>
+                    </ul>
+                </li>
+                <li><strong>웹 앱 배포:</strong>
+                    <ul>
+                        <li>Apps Script에서 "배포" → "새 배포" 선택</li>
+                        <li>유형: "웹 앱" 선택</li>
+                        <li>실행 권한: "나" 선택</li>
+                        <li>액세스 권한: "모든 사용자" 선택</li>
+                        <li>배포 후 웹 앱 URL 복사</li>
+                    </ul>
+                </li>
+                <li><strong>아래 폼에 설정 정보 입력</strong></li>
+            </ol>
+        </div>
+        
+        <div class="config-section">
+            <h2>웹 앱 설정</h2>
+            <div class="input-group">
+                <label for="webapp-url">Google Apps Script 웹 앱 URL:</label>
+                <input type="url" id="webapp-url" placeholder="https://script.google.com/macros/s/...../exec">
+            </div>
+            <div class="input-group">
+                <label for="api-key">API 키:</label>
+                <input type="password" id="api-key" placeholder="사용자 정의 API 키">
+            </div>
+            <button onclick="configureWebApp()" class="btn">설정 저장</button>
+            <span id="config-status" class="config-status not-ready">미설정</span>
+            <div id="config-message" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="config-section">
+            <h2>동기화 실행</h2>
+            <button id="sync-all-btn" onclick="syncAllData()" class="btn" disabled>전체 데이터 동기화</button>
+            <button onclick="testConnection()" class="btn success">연결 테스트</button>
+            <div id="sync-status" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="config-section">
+            <h2>동기화 결과</h2>
+            <div id="results-container" style="display: none;">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>회사</th>
+                            <th>상태</th>
+                            <th>레코드 수</th>
+                            <th>메시지</th>
+                            <th>시간</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <h2>실시간 로그</h2>
+            <div id="logs" class="logs">보안 연동 시스템 준비 완료.</div>
+            <button onclick="clearLogs()" class="btn" style="margin-top: 0.5rem;">로그 지우기</button>
+        </div>
+        
+        <div class="config-section">
+            <h2>유용한 링크</h2>
+            <a href="index.html" class="btn success">메인 대시보드</a>
+            <a href="supabase/dummy-data/index.html" class="btn">더미 데이터 생성</a>
+            <a href="https://script.google.com" class="btn" target="_blank">Google Apps Script</a>
+            <a href="google-sheets-sync.html" class="btn danger">기존 연동 방식 (비추천)</a>
+        </div>
+    </div>
+
+    <script>
+        let logElement;
+        let isConfigured = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            logElement = document.getElementById('logs');
+            addLog('보안 연동 시스템 초기화 완료');
+            
+            // 저장된 설정 불러오기
+            loadSavedConfig();
+        });
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logElement.textContent = '로그가 지워졌습니다.\n';
+        }
+        
+        function showStatus(elementId, type, message) {
+            const statusElement = document.getElementById(elementId);
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+            statusElement.style.display = 'block';
+        }
+        
+        function updateConfigStatus(ready) {
+            const statusElement = document.getElementById('config-status');
+            const syncButton = document.getElementById('sync-all-btn');
+            
+            if (ready) {
+                statusElement.className = 'config-status ready';
+                statusElement.textContent = '설정 완료';
+                syncButton.disabled = false;
+                isConfigured = true;
+            } else {
+                statusElement.className = 'config-status not-ready';
+                statusElement.textContent = '미설정';
+                syncButton.disabled = true;
+                isConfigured = false;
+            }
+        }
+        
+        function configureWebApp() {
+            const webAppUrl = document.getElementById('webapp-url').value.trim();
+            const apiKey = document.getElementById('api-key').value.trim();
+            
+            if (!webAppUrl || !apiKey) {
+                showStatus('config-message', 'error', '웹 앱 URL과 API 키를 모두 입력해주세요.');
+                return;
+            }
+            
+            // URL 검증
+            try {
+                new URL(webAppUrl);
+            } catch (error) {
+                showStatus('config-message', 'error', '유효하지 않은 웹 앱 URL입니다.');
+                return;
+            }
+            
+            // 설정 저장
+            try {
+                window.configureSecureSync(webAppUrl, apiKey);
+                localStorage.setItem('webAppUrl', webAppUrl);
+                localStorage.setItem('apiKey', apiKey);
+                
+                updateConfigStatus(true);
+                showStatus('config-message', 'success', '설정이 저장되었습니다.');
+                addLog('웹 앱 설정 완료');
+                
+            } catch (error) {
+                showStatus('config-message', 'error', '설정 저장 중 오류가 발생했습니다.');
+                addLog(`설정 오류: ${error.message}`);
+            }
+        }
+        
+        function loadSavedConfig() {
+            const webAppUrl = localStorage.getItem('webAppUrl');
+            const apiKey = localStorage.getItem('apiKey');
+            
+            if (webAppUrl && apiKey) {
+                document.getElementById('webapp-url').value = webAppUrl;
+                document.getElementById('api-key').value = apiKey;
+                
+                try {
+                    window.configureSecureSync(webAppUrl, apiKey);
+                    updateConfigStatus(true);
+                    addLog('저장된 설정을 불러왔습니다.');
+                } catch (error) {
+                    addLog(`설정 불러오기 오류: ${error.message}`);
+                }
+            }
+        }
+        
+        async function testConnection() {
+            if (!isConfigured) {
+                showStatus('sync-status', 'error', '먼저 웹 앱을 설정해주세요.');
+                return;
+            }
+            
+            showStatus('sync-status', 'loading', '연결 테스트 중...');
+            addLog('연결 테스트 시작');
+            
+            try {
+                const result = await window.secureSync.fetchSecureData('warmguys');
+                
+                if (result && result.length >= 0) {
+                    showStatus('sync-status', 'success', `연결 성공! ${result.length}개 레코드 확인`);
+                    addLog(`연결 테스트 성공: ${result.length}개 레코드`);
+                } else {
+                    showStatus('sync-status', 'error', '연결은 되었지만 데이터가 없습니다.');
+                    addLog('연결 테스트: 데이터 없음');
+                }
+                
+            } catch (error) {
+                showStatus('sync-status', 'error', `연결 실패: ${error.message}`);
+                addLog(`연결 테스트 실패: ${error.message}`);
+            }
+        }
+        
+        async function syncAllData() {
+            if (!isConfigured) {
+                showStatus('sync-status', 'error', '먼저 웹 앱을 설정해주세요.');
+                return;
+            }
+            
+            const button = document.getElementById('sync-all-btn');
+            button.disabled = true;
+            button.textContent = '동기화 중...';
+            
+            showStatus('sync-status', 'loading', '전체 데이터 동기화 진행 중...');
+            addLog('전체 동기화 시작');
+            
+            try {
+                const results = await window.syncViaWebApp();
+                
+                // 결과 테이블 업데이트
+                updateResultsTable(results);
+                
+                // 성공한 회사 수 계산
+                const successCount = Object.values(results).filter(r => r.success).length;
+                const totalCount = Object.keys(results).length;
+                
+                if (successCount === totalCount) {
+                    showStatus('sync-status', 'success', `모든 회사 데이터 동기화 완료! (${successCount}/${totalCount})`);
+                    addLog(`전체 동기화 완료: ${successCount}/${totalCount} 성공`);
+                } else {
+                    showStatus('sync-status', 'error', `일부 실패: ${successCount}/${totalCount} 성공`);
+                    addLog(`전체 동기화 완료: ${successCount}/${totalCount} 성공`);
+                }
+                
+            } catch (error) {
+                showStatus('sync-status', 'error', `동기화 실패: ${error.message}`);
+                addLog(`전체 동기화 실패: ${error.message}`);
+                console.error(error);
+            } finally {
+                button.disabled = false;
+                button.textContent = '전체 데이터 동기화';
+            }
+        }
+        
+        function updateResultsTable(results) {
+            const container = document.getElementById('results-container');
+            const tbody = document.getElementById('results-body');
+            
+            tbody.innerHTML = '';
+            
+            Object.entries(results).forEach(([company, result]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${getCompanyName(company)}</td>
+                    <td><span style="color: ${result.success ? '#16a34a' : '#dc2626'}">${result.success ? '성공' : '실패'}</span></td>
+                    <td>${result.recordCount || 0}</td>
+                    <td>${result.message}</td>
+                    <td>${new Date().toLocaleTimeString('ko-KR')}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            container.style.display = 'block';
+        }
+        
+        function getCompanyName(company) {
+            const names = {
+                warmguys: '따스한놈들',
+                mrs: '엠알에스',
+                apgujeong: '압구정곱창',
+                geukjin: '극진이앤지'
+            };
+            return names[company] || company;
+        }
+    </script>
+</body>
+</html>

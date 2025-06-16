@@ -1,0 +1,1 @@
+"use strict";exports.id=850,exports.ids=[850],exports.modules={3850:(r,t,e)=>{function formatNumber(r){return null==r?"0":new Intl.NumberFormat("ko-KR").format(Math.round(r))}function formatPercent(r){return null==r?"0%":`${r.toFixed(1)}%`}e.d(t,{T3:()=>formatPercent,uf:()=>formatNumber})}};

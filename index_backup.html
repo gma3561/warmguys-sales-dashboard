@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>따스한놈들 매출 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #1f2937;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .login-section.hidden {
+            display: none;
+        }
+        
+        .dashboard-section {
+            display: none;
+        }
+        
+        .dashboard-section.visible {
+            display: block;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .error {
+            color: #dc2626;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        
+        .nav {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav select, .nav input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .kpi-card h3 {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .kpi-card .value {
+            color: #1f2937;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .chart-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 1rem;
+        }
+        
+        .month-table {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .month-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .month-nav button {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+        }
+        
+        .month-nav button:hover {
+            background: #e5e7eb;
+        }
+        
+        .month-nav .current-month {
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        th, td {
+            padding: 0.5rem;
+            text-align: right;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            text-align: center;
+        }
+        
+        th:first-child, td:first-child {
+            text-align: center;
+            background: #f9fafb;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+        
+        .day-column {
+            min-width: 80px;
+        }
+        
+        .total-row {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+        
+        .status {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .status.loading {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 0.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 따스한놈들 매출 대시보드</h1>
+            <p>계열사 매출 데이터를 실시간으로 분석하고 시각화하는 통합 대시보드</p>
+        </div>
+
+        <!-- 로그인 섹션 -->
+        <div id="login-section" class="login-section">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">로그인</h2>
+            <div class="input-group">
+                <label for="username">아이디</label>
+                <input type="text" id="username" placeholder="아이디를 입력하세요">
+            </div>
+            <div class="input-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+            </div>
+            <button class="btn" onclick="login()">로그인</button>
+            <div id="login-error" class="error"></div>
+        </div>
+
+        <!-- 대시보드 섹션 -->
+        <div id="dashboard-section" class="dashboard-section">
+            <!-- 네비게이션 -->
+            <div class="nav">
+                <div class="nav-controls">
+                    <label for="affiliate-select">계열사: </label>
+                    <select id="affiliate-select" onchange="changeAffiliate()">
+                        <option value="MRS">엠알에스</option>
+                        <option value="APGUJEONG">압구정곱창</option>
+                        <option value="GEUKJIN">극진이앤지</option>
+                    </select>
+                    <div class="nav-links" style="margin-top: 15px;">
+                        <a href="dashboard/mrs/index.html" class="link-btn" style="display: inline-block; padding: 8px 12px; margin-right: 10px; background: #4f46e5; color: white; text-decoration: none; border-radius: 4px;">엠알에스 대시보드</a>
+                        <a href="dashboard/apgujeong/index.html" class="link-btn" style="display: inline-block; padding: 8px 12px; margin-right: 10px; background: #4f46e5; color: white; text-decoration: none; border-radius: 4px;">압구정곱창 대시보드</a>
+                        <a href="dashboard/geukjin/index.html" class="link-btn" style="display: inline-block; padding: 8px 12px; background: #4f46e5; color: white; text-decoration: none; border-radius: 4px;">극진이앤지 대시보드</a>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+
+            <!-- 상태 표시 -->
+            <div id="status" class="status loading">
+                📊 데이터를 불러오고 있습니다...
+            </div>
+
+            <!-- KPI 카드 -->
+            <div class="kpi-grid" id="kpi-grid">
+                <!-- KPI 카드들이 동적으로 생성됩니다 -->
+            </div>
+
+            <!-- 차트 섹션 -->
+            <div class="charts-grid" id="charts-section">
+                <!-- 차트들이 동적으로 생성됩니다 -->
+            </div>
+
+            <!-- 월간 데이터 테이블 -->
+            <div class="month-table">
+                <div class="month-header">
+                    <h3 id="table-title">월간 매출 데이터</h3>
+                    <div class="month-nav">
+                        <button onclick="changeMonth(-1)">◀</button>
+                        <span class="current-month" id="current-month">2025년 5월</span>
+                        <button onclick="changeMonth(1)">▶</button>
+                    </div>
+                </div>
+                <table id="month-data-table">
+                    <thead id="table-header">
+                        <!-- 헤더가 동적으로 생성됩니다 -->
+                    </thead>
+                    <tbody id="table-body">
+                        <tr>
+                            <td colspan="100%" style="text-align: center; color: #6b7280;">데이터를 불러오고 있습니다...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 클라이언트 설정
+        const SUPABASE_URL = 'https://ooqexropurnslqmcbjqk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcWV4cm9wdXJuc2xxbWNiamxxayIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzQ3NDc0MjA1LCJleHAiOjIwNjMwNTAyMDV9.yXVabxtZwX3QFF6xnjmj5VI2Lrp_7fZ3HvS5dCalbA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentAffiliate = 'MRS';
+        let currentYear = 2025;
+        let currentMonth = 5; // 5월
+        let salesChart = null;
+        let channelChart = null;
+
+        // 계열사별 설정
+        const affiliateConfigs = {
+            'MRS': {
+                name: '엠알에스',
+                type: 'online',
+                kpis: ['총 매출', '쿠팡로켓 매출', '스마트스토어 매출', '환불액'],
+                fields: {
+                    main: ['coupang_rocket', 'smart_store', 'coupang_wing', 'other_online', 'wholesale', 'export'],
+                    display: ['쿠팡로켓', '스마트스토어', '쿠팡윙', '기타온라인', '도매', '수출', '총매출', '환불액', '주문수', '특이사항']
+                },
+                chartConfig: {
+                    channels: [
+                        { key: 'coupang_rocket', label: '쿠팡로켓', color: '#ff6b6b' },
+                        { key: 'smart_store', label: '스마트스토어', color: '#4ecdc4' },
+                        { key: 'coupang_wing', label: '쿠팡윙', color: '#45b7d1' },
+                        { key: 'other_online', label: '기타온라인', color: '#96ceb4' },
+                        { key: 'wholesale', label: '도매', color: '#feca57' },
+                        { key: 'export', label: '수출', color: '#ff9ff3' }
+                    ]
+                }
+            },
+            'APGUJEONG': {
+                name: '압구정곱창',
+                type: 'restaurant',
+                kpis: ['일일 평균매출', '고객 수', '테이블회전율', '카드 매출'],
+                fields: {
+                    main: ['card_sales', 'cash_sales', 'delivery_sales'],
+                    display: ['요일', '카드매출', '현금매출', '배달매출', '총매출', '고객수', '테이블회전율', '현금입금', '현금지출', '특이사항']
+                }
+            },
+            'GEUKJIN': {
+                name: '극진이앤지',
+                type: 'energy',
+                kpis: ['총 매출', '총 마진', '마진율', '성장률'],
+                fields: {
+                    main: ['gasoline_sales', 'diesel_sales', 'kerosene_sales', 'freight_sales'],
+                    display: ['휘발유매출', '경유매출', '등유매출', '화물매출', '총매출', '총원가', '총마진', '성장률', '특이사항']
+                }
+            }
+        };
+
+        // 로그인 함수
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (username === 'Warmguys' && password === 'Eksha12!@') {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loginTime', Date.now().toString());
+                
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.add('visible');
+                
+                loadDashboard();
+            } else {
+                errorDiv.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+            }
+        }
+
+        // 로그아웃 함수
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('loginTime');
+            
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('dashboard-section').classList.remove('visible');
+        }
+
+        // 페이지 로드 시 로그인 상태 확인
+        window.onload = function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const loginTime = localStorage.getItem('loginTime');
+            
+            if (isLoggedIn && loginTime) {
+                const elapsed = Date.now() - parseInt(loginTime);
+                if (elapsed > 24 * 60 * 60 * 1000) {
+                    logout();
+                    return;
+                }
+                
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.add('visible');
+                loadDashboard();
+            }
+        };
+
+        // 대시보드 로드
+        async function loadDashboard() {
+            try {
+                document.getElementById('status').className = 'status loading';
+                document.getElementById('status').textContent = '📊 데이터를 불러오고 있습니다...';
+                
+                await loadSalesData();
+                
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').textContent = '✅ 데이터 로드 완료!';
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = '❌ 데이터 로드 실패: ' + error.message;
+            }
+        }
+
+        // 매출 데이터 로드 (통합 테이블에서)
+        async function loadSalesData() {
+            const { data, error } = await supabase
+                .from('warmguys_sales')
+                .select('*')
+                .eq('affiliate_key', currentAffiliate)
+                .order('date', { ascending: true });
+
+            if (error) throw error;
+
+            updateDashboardLayout();
+            updateKPIs(data);
+            updateCharts(data);
+            updateMonthlyTable(data);
+        }
+
+        // 대시보드 레이아웃 업데이트
+        function updateDashboardLayout() {
+            const config = affiliateConfigs[currentAffiliate];
+            
+            // KPI 카드 생성
+            const kpiGrid = document.getElementById('kpi-grid');
+            kpiGrid.innerHTML = '';
+            
+            config.kpis.forEach((kpi, index) => {
+                const kpiCard = document.createElement('div');
+                kpiCard.className = 'kpi-card';
+                kpiCard.innerHTML = `
+                    <h3>${kpi}</h3>
+                    <div class="value" id="kpi-${index}">-</div>
+                `;
+                kpiGrid.appendChild(kpiCard);
+            });
+
+            // 차트 섹션 생성
+            const chartsSection = document.getElementById('charts-section');
+            chartsSection.innerHTML = '';
+            
+            if (currentAffiliate === 'MRS') {
+                chartsSection.innerHTML = `
+                    <div class="chart-section">
+                        <h3>채널별 매출 추이</h3>
+                        <div class="chart-container">
+                            <canvas id="sales-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h3>채널별 매출 비율</h3>
+                        <div class="chart-container">
+                            <canvas id="channel-chart"></canvas>
+                        </div>
+                    </div>
+                `;
+            } else {
+                chartsSection.innerHTML = `
+                    <div class="chart-section" style="grid-column: 1/-1;">
+                        <h3>매출 추이</h3>
+                        <div class="chart-container">
+                            <canvas id="sales-chart"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 테이블 제목 업데이트
+            document.getElementById('table-title').textContent = `${config.name} 월간 매출 데이터`;
+        }
+
+        // KPI 업데이트
+        function updateKPIs(data) {
+            if (!data || data.length === 0) return;
+
+            const config = affiliateConfigs[currentAffiliate];
+
+            switch(currentAffiliate) {
+                case 'MRS':
+                    updateMRSKPIs(data);
+                    break;
+                case 'APGUJEONG':
+                    updateAPGUJEONGKPIs(data);
+                    break;
+                case 'GEUKJIN':
+                    updateGEUKJINKPIs(data);
+                    break;
+            }
+        }
+
+        function updateMRSKPIs(data) {
+            const totalSales = data.reduce((sum, row) => sum + (parseFloat(row.total_sales) || 0), 0);
+            const coupangRocketSales = data.reduce((sum, row) => sum + (parseFloat(row.coupang_rocket) || 0), 0);
+            const smartStoreSales = data.reduce((sum, row) => sum + (parseFloat(row.smart_store) || 0), 0);
+            const totalRefund = data.reduce((sum, row) => sum + (parseFloat(row.refund_amount) || 0), 0);
+
+            document.getElementById('kpi-0').textContent = formatCurrency(totalSales);
+            document.getElementById('kpi-1').textContent = formatCurrency(coupangRocketSales);
+            document.getElementById('kpi-2').textContent = formatCurrency(smartStoreSales);
+            document.getElementById('kpi-3').textContent = formatCurrency(totalRefund);
+        }
+
+        function updateAPGUJEONGKPIs(data) {
+            const totalSales = data.reduce((sum, row) => sum + (parseFloat(row.total_sales) || 0), 0);
+            const avgSales = totalSales / data.length;
+            const totalCustomers = data.reduce((sum, row) => sum + (parseInt(row.customer_count) || 0), 0);
+            const avgTurnover = data.reduce((sum, row) => sum + (parseFloat(row.table_turnover) || 0), 0) / data.length;
+            const cardSales = data.reduce((sum, row) => sum + (parseFloat(row.card_sales) || 0), 0);
+
+            document.getElementById('kpi-0').textContent = formatCurrency(avgSales);
+            document.getElementById('kpi-1').textContent = totalCustomers.toLocaleString() + '명';
+            document.getElementById('kpi-2').textContent = avgTurnover.toFixed(1) + '회';
+            document.getElementById('kpi-3').textContent = formatCurrency(cardSales);
+        }
+
+        function updateGEUKJINKPIs(data) {
+            const totalSales = data.reduce((sum, row) => sum + (parseFloat(row.total_sales) || 0), 0);
+            const totalMargin = data.reduce((sum, row) => sum + (parseFloat(row.total_margin) || 0), 0);
+            const marginRate = totalSales > 0 ? (totalMargin / totalSales * 100) : 0;
+            const avgGrowthRate = data.reduce((sum, row) => sum + (parseFloat(row.growth_rate) || 0), 0) / data.length;
+
+            document.getElementById('kpi-0').textContent = formatCurrency(totalSales);
+            document.getElementById('kpi-1').textContent = formatCurrency(totalMargin);
+            document.getElementById('kpi-2').textContent = marginRate.toFixed(1) + '%';
+            document.getElementById('kpi-3').textContent = '+' + avgGrowthRate.toFixed(1) + '%';
+        }
+
+        // 차트 업데이트
+        function updateCharts(data) {
+            if (currentAffiliate === 'MRS') {
+                updateMRSCharts(data);
+            } else {
+                updateDefaultChart(data);
+            }
+        }
+
+        function updateMRSCharts(data) {
+            // 채널별 매출 추이 차트
+            const salesCtx = document.getElementById('sales-chart');
+            if (salesChart) {
+                salesChart.destroy();
+            }
+
+            const labels = data.map(row => new Date(row.date).toLocaleDateString('ko-KR'));
+            const config = affiliateConfigs['MRS'];
+            const datasets = config.chartConfig.channels.map(channel => ({
+                label: channel.label,
+                data: data.map(row => parseFloat(row[channel.key]) || 0),
+                borderColor: channel.color,
+                backgroundColor: channel.color + '20',
+                tension: 0.4
+            }));
+
+            salesChart = new Chart(salesCtx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 채널별 매출 비율 차트
+            const channelCtx = document.getElementById('channel-chart');
+            if (channelChart) {
+                channelChart.destroy();
+            }
+
+            const channelTotals = config.chartConfig.channels.map(channel => ({
+                label: channel.label,
+                value: data.reduce((sum, row) => sum + (parseFloat(row[channel.key]) || 0), 0),
+                color: channel.color
+            }));
+
+            channelChart = new Chart(channelCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: channelTotals.map(item => item.label),
+                    datasets: [{
+                        data: channelTotals.map(item => item.value),
+                        backgroundColor: channelTotals.map(item => item.color),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDefaultChart(data) {
+            const ctx = document.getElementById('sales-chart');
+            if (salesChart) {
+                salesChart.destroy();
+            }
+
+            const labels = data.map(row => new Date(row.date).toLocaleDateString('ko-KR'));
+            const salesData = data.map(row => parseFloat(row.total_sales) || 0);
+
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '총 매출',
+                        data: salesData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 월간 테이블 업데이트
+        function updateMonthlyTable(data) {
+            const config = affiliateConfigs[currentAffiliate];
+            
+            // 현재 월 데이터 필터링
+            const monthData = data.filter(row => {
+                const date = new Date(row.date);
+                return date.getFullYear() === currentYear && (date.getMonth() + 1) === currentMonth;
+            });
+
+            // 헤더 생성
+            const thead = document.getElementById('table-header');
+            thead.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            
+            const dayHeader = document.createElement('th');
+            dayHeader.textContent = '일';
+            dayHeader.style.position = 'sticky';
+            dayHeader.style.left = '0';
+            dayHeader.style.zIndex = '11';
+            headerRow.appendChild(dayHeader);
+            
+            config.fields.display.forEach(field => {
+                const th = document.createElement('th');
+                th.textContent = field;
+                th.className = 'day-column';
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+
+            // 월간 데이터 테이블 생성 (1일부터 31일까지)
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+            let monthTotals = {};
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayData = monthData.find(row => row.date === dateStr);
+                
+                const tr = document.createElement('tr');
+                
+                // 일자 컬럼
+                const dayTd = document.createElement('td');
+                dayTd.textContent = day + '일';
+                dayTd.style.position = 'sticky';
+                dayTd.style.left = '0';
+                dayTd.style.background = '#f9fafb';
+                dayTd.style.zIndex = '10';
+                tr.appendChild(dayTd);
+                
+                // 데이터 컬럼들
+                config.fields.display.forEach(field => {
+                    const td = document.createElement('td');
+                    let value = '-';
+                    
+                    if (dayData) {
+                        const dbField = getDbFieldName(field, currentAffiliate);
+                        value = dayData[dbField] || '-';
+                        
+                        if (field.includes('매출') || field.includes('원가') || field.includes('마진') || field.includes('할인') || field.includes('입금') || field.includes('지출')) {
+                            if (value !== '-') {
+                                const numValue = parseFloat(value) || 0;
+                                value = formatCurrency(numValue);
+                                
+                                // 월 합계 계산
+                                if (!monthTotals[field]) monthTotals[field] = 0;
+                                monthTotals[field] += numValue;
+                            }
+                        } else if (field.includes('수') || field.includes('회전율')) {
+                            if (value !== '-') {
+                                value = (parseFloat(value) || 0).toLocaleString();
+                            }
+                        } else if (field === '성장률') {
+                            if (value !== '-') {
+                                value = (parseFloat(value) || 0).toFixed(1) + '%';
+                            }
+                        }
+                    }
+                    
+                    td.textContent = value;
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            }
+            
+            // 월 합계 행 추가
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'total-row';
+            
+            const totalDayTd = document.createElement('td');
+            totalDayTd.textContent = '월 합계';
+            totalDayTd.style.position = 'sticky';
+            totalDayTd.style.left = '0';
+            totalDayTd.style.background = '#f3f4f6';
+            totalDayTd.style.zIndex = '10';
+            totalRow.appendChild(totalDayTd);
+            
+            config.fields.display.forEach(field => {
+                const td = document.createElement('td');
+                if (monthTotals[field]) {
+                    td.textContent = formatCurrency(monthTotals[field]);
+                } else {
+                    td.textContent = '-';
+                }
+                totalRow.appendChild(td);
+            });
+            
+            tbody.appendChild(totalRow);
+        }
+
+        // 표시명을 DB 필드명으로 변환
+        function getDbFieldName(displayName, affiliate) {
+            const mappings = {
+                'MRS': {
+                    '쿠팡로켓': 'coupang_rocket',
+                    '스마트스토어': 'smart_store',
+                    '쿠팡윙': 'coupang_wing',
+                    '기타온라인': 'other_online',
+                    '도매': 'wholesale',
+                    '수출': 'export',
+                    '총매출': 'total_sales',
+                    '환불액': 'refund_amount',
+                    '주문수': 'order_count',
+                    '특이사항': 'notes'
+                },
+                'APGUJEONG': {
+                    '요일': 'day_of_week',
+                    '카드매출': 'card_sales',
+                    '현금매출': 'cash_sales',
+                    '배달매출': 'delivery_sales',
+                    '총매출': 'total_sales',
+                    '고객수': 'customer_count',
+                    '테이블회전율': 'table_turnover',
+                    '현금입금': 'cash_deposit',
+                    '현금지출': 'cash_expense',
+                    '특이사항': 'special_notes'
+                },
+                'GEUKJIN': {
+                    '휘발유매출': 'gasoline_sales',
+                    '경유매출': 'diesel_sales',
+                    '등유매출': 'kerosene_sales',
+                    '화물매출': 'freight_sales',
+                    '총매출': 'total_sales',
+                    '총원가': 'total_cost',
+                    '총마진': 'total_margin',
+                    '성장률': 'growth_rate',
+                    '특이사항': 'notes'
+                }
+            };
+            
+            return mappings[affiliate]?.[displayName] || displayName.toLowerCase();
+        }
+
+        // 계열사 변경
+        function changeAffiliate() {
+            currentAffiliate = document.getElementById('affiliate-select').value;
+            loadDashboard();
+        }
+
+        // 월 변경
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            } else if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+            
+            document.getElementById('current-month').textContent = `${currentYear}년 ${currentMonth}월`;
+            loadDashboard();
+        }
+
+        // 통화 포맷
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('ko-KR', { 
+                style: 'currency', 
+                currency: 'KRW' 
+            }).format(amount);
+        }
+
+        // Enter 키로 로그인
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('login-section').classList.contains('hidden')) {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>
