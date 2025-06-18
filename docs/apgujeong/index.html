@@ -441,7 +441,7 @@
                 
                 if (selectedBranch === 'all' || selectedBranch === 'garosu') {
                     const { data: garosuData, error: garosuError } = await supabase
-                        .from('apgujeong_garosu_sales')
+                        .from('garosu_sales')
                         .select('*')
                         .order('date', { ascending: true });
                     
